@@ -82,6 +82,7 @@ EOD;
 %NEXT_DATE%
 </div>
 <div id="next_page" class="next_page">&nbsp;</div>
+<div class="item_select"></div>
 </div>
 EOD;
 		$search = array(

@@ -580,3 +580,33 @@ table.weekly_schedule td.you a {
 	top:1px;
 }
 
+.booking_btn {
+	float: right;
+	width: 60px;
+	border: 1px solid #eee;
+	transition: all 0.5s;
+}
+.item_select {
+	text-align: center;
+	color: red;
+}
+
+.booking_btn:hover {
+	background: #1af;
+	border: 1px solid #1af;
+	color: white;
+}
+
+table.weekly_schedule td.open,
+.reserve_slot {
+	cursor: pointer;
+	transition: all 0.5s;
+}
+
+table.weekly_schedule td.open.active {
+	background-color: #1b6691;
+}
+
+/* .reserve_slot.active {
+	color: #1b6691;
+} */

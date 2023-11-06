@@ -55,4 +55,31 @@ jQuery(document).ready(function($){
 		}
 	})
 
+	var date_time_arr = []
+	var room_arr = []
+	$(".reserve_slot").click(function(e) {
+		$(this).toggleClass('active');
+		$(this).parent().toggleClass('active');
+		if($(e.target).hasClass('active')) {
+			date_time_arr.push($(this).attr('data-date-time'));
+			if(!room_arr.includes($(this).attr('data-room'))) {
+				room_arr.push($(this).attr('data-room'));
+			}
+			$(".item_select").text(date_time_arr.join(" / "));
+		}
+		else {
+			date_time_arr = date_time_arr.filter(e => e !== $(this).attr('data-date-time'))
+			$(".item_select").text( date_time_arr.join(" / "));
+
+		}
+	})
+
+	$(".booking_btn").click(function() {
+		if(Array.isArray(date_time_arr) && date_time_arr.length) {
+			$dates = date_time_arr.join(",");
+			$room_id = room_arr.join(",");
+			window.location.href = `${window.location.origin}/public_html/reservation/?t=${$dates}&room_id=${$room_id}`
+		}
+	})
+
 })

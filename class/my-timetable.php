@@ -1277,7 +1277,8 @@ EOD;
 			$format = '<a href="%1$s&t=%2$s&room_id=%3$s">%4$s</a>'."\n";
 		}
 		else {
-			$format = '<a href="%1$s?t=%2$s&room_id=%3$s">%4$s</a>'."\n";
+			// $format = '<a href="%1$s?t=%2$s&room_id=%3$s">%4$s</a>'."\n";
+			$format = '<span class="reserve_slot" data-date-time="%2$s" data-room="%3$s">%4$s</span>'."\n";
 		}
 		printf($format,
 				get_permalink(get_page_by_path($olb->reserve_form_page)->ID),
@@ -1412,6 +1413,7 @@ EOD;
 		$body =	self::htmlWeeklyBody();
 
 		ob_start();
+		echo '<button id="booking_btn" class="booking_btn">予約</button>';
 		echo '<table id="weekly_schedule" class="weekly_schedule">'."\n"
 			.'<thead>'."\n"
 			.$header
