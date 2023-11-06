@@ -213,7 +213,7 @@ class olbTimetable extends OLBsystem{
 	/** 
 	 *	会員による予約の可否: Can member do reservation ? 
 	 */
-	public static function canReservation( $result, $room_id, $user_id, $date, $time ) {
+	public static function canReservation( $result, $room_id, $user_id, $dates, $times ) {
 		global $olb;
 
 		$result = array(
@@ -222,91 +222,99 @@ class olbTimetable extends OLBsystem{
 			'user' => null,
 			'room' => null,
 			);
-		if(!preg_match('/^[0-9]+$/', $room_id) ||
-			!preg_match('/^[0-9]+$/', $user_id) ||
-			!preg_match('/^([2-9][0-9]{3})-(0[1-9]{1}|1[0-2]{1})-(0[1-9]{1}|[1-2]{1}[0-9]{1}|3[0-1]{1})$/', $date) ||
-			//!preg_match('/^([0-1][0-9]{1}|2[0-4]{1}):[0-5][0-9]{1}:[0-5][0-9]{1}$/', $time)) {
-			!preg_match('/^[0-9]{2}:[0-5][0-9]{1}:[0-5][0-9]{1}$/', $time)) {
-			$result['code'] = 'INVALID_PARAMETER';
-			return $result;
-		}
+		
+		if (is_array($dates) || is_object($dates) and is_array($times) || is_object($times)) {
+			foreach($dates as $key=>$date) {
+				$time = $times[$key];
 
-		$user = new olbAuth($user_id);
-		$room = olbRoom::get($room_id);
-		$record = olbTimetable::reserved($room_id, $date, $time);
+				if(!preg_match('/^[0-9]+$/', $room_id) ||
+					!preg_match('/^[0-9]+$/', $user_id) ||
+					!preg_match('/^([2-9][0-9]{3})-(0[1-9]{1}|1[0-2]{1})-(0[1-9]{1}|[1-2]{1}[0-9]{1}|3[0-1]{1})$/', $date) ||
+					//!preg_match('/^([0-1][0-9]{1}|2[0-4]{1}):[0-5][0-9]{1}:[0-5][0-9]{1}$/', $time)) {
+					!preg_match('/^[0-9]{2}:[0-5][0-9]{1}:[0-5][0-9]{1}$/', $time)) {
+					$result['code'] = 'INVALID_PARAMETER';
+					return $result;
+				}
+
+				$user = new olbAuth($user_id);
+				$room = olbRoom::get($room_id);
+				$record = olbTimetable::reserved($room_id, $date, $time);
+
 		/** 
-		 *	[reserved]
-		 *	$record = array( 
-		 *		'id'      => 1595,
-		 *		'date'    => '2013-07-09',
-		 *		'time'    => '10:00:00',
-		 *		'room_id' => 1,
-		 *		'user_id' => 3,
-		 *		'free'    => 0,
-		 *		'absent'  => 0,
-		 *	)
-		 *
-		 *	[not reserved]
-		 *	$record = array( 
-		 *		'id'      => (null),
-		 *		'date'    => '2013-07-09',
-		 *		'time'    => '10:00:00',
-		 *		'room_id' => 1,
-		 *		'user_id' => (null),
-		 *		'free'    => (null),
-		 *		'absent'  => (null),
-		 *	)
-		 *
-		 */
+				 *	[reserved]
+				*	$record = array( 
+				*		'id'      => 1595,
+				*		'date'    => '2013-07-09',
+				*		'time'    => '10:00:00',
+				*		'room_id' => 1,
+				*		'user_id' => 3,
+				*		'free'    => 0,
+				*		'absent'  => 0,
+				*	)
+				*
+				*	[not reserved]
+				*	$record = array( 
+				*		'id'      => (null),
+				*		'date'    => '2013-07-09',
+				*		'time'    => '10:00:00',
+				*		'room_id' => 1,
+				*		'user_id' => (null),
+				*		'free'    => (null),
+				*		'absent'  => (null),
+				*	)
+				*
+				*/
 
-		$result['record'] = $record;
-		$result['user'] = $user;
-		$result['room'] = $room;
-
-		if ( empty( $room ) ) {
-			$result['code'] = 'NONEXISTENT_TEACHER';
-		}
-		elseif( empty( $record ) ) {
-			$result['code'] = 'NO_RECORD';
-		}
-		// 空き: not reserved
-		elseif ( empty( $record['user_id'] ) ) {
-			// 期限切れ & 無料予約数残なし
-			if( !$user->isNotExpire( $date ) && !$user->canFreeReservation() ) {
-				$result['code'] = 'RESERVE_EXPIRED';
+				$result['record'] = $record;
+				$result['user'] = $user;
+				$result['room'] = $room;
+		
+				if ( empty( $room ) ) {
+					$result['code'] = 'NONEXISTENT_TEACHER';
+				}
+				elseif( empty( $record ) ) {
+					$result['code'] = 'NO_RECORD';
+				}
+				// 空き: not reserved
+				elseif ( empty( $record['user_id'] ) ) {
+					// 期限切れ & 無料予約数残なし
+					if( !$user->isNotExpire( $date ) && !$user->canFreeReservation() ) {
+						$result['code'] = 'RESERVE_EXPIRED';
+					}
+					// 受付時間オーバー
+					elseif ( olbTimetable::isTimeover( 'reserve', $date, $time ) ) {
+						$result['code'] = 'RESERVE_TIMEOVER';
+					}
+					// 1日の予約数上限
+					elseif ( !olbTimetable::canReservePerDay( $user_id, $date ) ) {
+						$result['code'] = 'RESERVE_LIMIT_PER_DAY';
+					}
+					// 1ヶ月の予約数上限
+					elseif ( !olbTimetable::canReservePerMonth( $user_id, $date ) ) {
+						$result['code'] = 'RESERVE_LIMIT_PER_MONTH';
+					}
+					// 同日時を別予約済み
+					elseif( olbTimetable::isDoubleBooking( $user_id, $date, $time ) ) {
+						$result['code'] = 'DOUBLE_BOOKING';
+					}
+					else {
+						$result['code'] = 'NOT_RESERVED';
+					}
+				}
+				// 自身予約済: reserved by self
+				elseif ( $record['user_id'] == $user_id ) {
+					if ( olbTimetable::isTimeover( 'cancel', $date, $time ) ) {
+						$result['code'] = 'CANCEL_TIMEOVER';
+					}
+					else {
+						$result['code'] = 'ALREADY_RESERVED';
+					}
+				}
+				// 他者予約済: reserved by others
+				else {
+					$result['code'] = 'OTHERS_RECORD';
+				}
 			}
-			// 受付時間オーバー
-			elseif ( olbTimetable::isTimeover( 'reserve', $date, $time ) ) {
-				$result['code'] = 'RESERVE_TIMEOVER';
-			}
-			// 1日の予約数上限
-			elseif ( !olbTimetable::canReservePerDay( $user_id, $date ) ) {
-				$result['code'] = 'RESERVE_LIMIT_PER_DAY';
-			}
-			// 1ヶ月の予約数上限
-			elseif ( !olbTimetable::canReservePerMonth( $user_id, $date ) ) {
-				$result['code'] = 'RESERVE_LIMIT_PER_MONTH';
-			}
-			// 同日時を別予約済み
-			elseif( olbTimetable::isDoubleBooking( $user_id, $date, $time ) ) {
-				$result['code'] = 'DOUBLE_BOOKING';
-			}
-			else {
-				$result['code'] = 'NOT_RESERVED';
-			}
-		}
-		// 自身予約済: reserved by self
-		elseif ( $record['user_id'] == $user_id ) {
-			if ( olbTimetable::isTimeover( 'cancel', $date, $time ) ) {
-				$result['code'] = 'CANCEL_TIMEOVER';
-			}
-			else {
-				$result['code'] = 'ALREADY_RESERVED';
-			}
-		}
-		// 他者予約済: reserved by others
-		else {
-			$result['code'] = 'OTHERS_RECORD';
 		}
 
 		return $result;
@@ -433,14 +441,27 @@ class olbTimetable extends OLBsystem{
 		}
 
 		if(!$error) {
-			$date = $olb->getQueryDate();
-			$time = $olb->getQueryTime();
+			$dates = $olb->getQueryDate();
+			$times = $olb->getQueryTime();
+
+			// $_req_datetime = explode(",",$olb->qs['t']) ?? [];
+			$date_time_arr = array();
+
+			foreach($dates as $key=>$date) {
+				$time = $times[$key];
+				$time = substr( $time, 0, 5 );
+				$date_time = $date.' '.$time; 
+				array_push($date_time_arr,$date_time);
+			}
+
+			$date_time_string =  implode(', ',$date_time_arr);
+
 			$formaction = get_permalink(get_page_by_path($olb->reserve_form_page)->ID);
 
 			$action = null;
 
 			$result = array();
-			$result = apply_filters( 'olb_can_reservation', $result, $olb->room_id, $olb->operator->data['id'], $date, $time );
+			$result = apply_filters( 'olb_can_reservation', $result, $olb->room_id, $olb->operator->data['id'], $dates, $times );
 			/** 
 			 *	$result = array( 
 			 *		'code'   => 'RESERVE_OK',
@@ -502,28 +523,28 @@ class olbTimetable extends OLBsystem{
 				}
 
 				$format = <<<EOD
-<form id="reservation" class="reservation" method="post" action="%FORMACTION%">
-<dl>
-<dt>%LABEL_ID%:</dt>
-<dd>%ID% {$already_reserved} {$free}
-<input type="hidden" id="reserve_id" name="reserve_id" value="%ID%" />
-<dt>%LABEL_ROOM%:</dt>
-<dd>%ROOM_NAME%
-<input type="hidden" id="room_id" name="room_id" value="%ROOM_ID%" />
-</dd>
-<dt>%LABEL_USER%:</dt>
-<dd>%USER_NAME%(Skype: %USER_SKYPE%)
-<input type="hidden" id="user_id" name="user_id" value="%USER_ID%" />
-</dd>
-<dt>%LABEL_DATETIME%:</dt>
-<dd>%DATETIME%
-<input type="hidden" id="reservedate" name="reservedate" value="%DATE%" />
-<input type="hidden" id="reservetime" name="reservetime" value="%TIME%" />
-</dd>
-</dl>
-%NONCE%
-<input type="hidden" id="reserveaction" name="reserveaction" value="%ACTION%" />
-<input type="submit" id="reservesubmit" name="reservesubmit" value="%SUBMIT%" class="{$btnclass}" />
+					<form id="reservation" class="reservation" method="post" action="%FORMACTION%">
+					<dl>
+					<dt>%LABEL_ID%:</dt>
+					<dd>%ID% {$already_reserved} {$free}
+					<input type="hidden" id="reserve_id" name="reserve_id" value="%ID%" />
+					<dt>%LABEL_ROOM%:</dt>
+					<dd>%ROOM_NAME%
+					<input type="hidden" id="room_id" name="room_id" value="%ROOM_ID%" />
+					</dd>
+					<dt>%LABEL_USER%:</dt>
+					<dd>%USER_NAME%(Skype: %USER_SKYPE%)
+					<input type="hidden" id="user_id" name="user_id" value="%USER_ID%" />
+					</dd>
+					<dt>%LABEL_DATETIME%:</dt>
+					<dd>%DATETIME%
+					<input type="hidden" id="reservedate" name="reservedate" value="%DATE%" />
+					<input type="hidden" id="reservetime" name="reservetime" value="%TIME%" />
+					</dd>
+					</dl>
+					%NONCE%
+					<input type="hidden" id="reserveaction" name="reserveaction" value="%ACTION%" />
+					<input type="submit" id="reservesubmit" name="reservesubmit" value="%SUBMIT%" class="{$btnclass}" />
 EOD;
 
 				if($message_key) {
@@ -563,9 +584,10 @@ EOD;
 						$olb->operator->data['id'],
 						$olb->operator->data['skype'],
 						__('Date/Time', OLBsystem::TEXTDOMAIN),
-						sprintf( '%s %s', $date, substr( $time, 0, 5 ) ),
-						$date,
-						$time,
+						// sprintf( '%s %s', $date, substr( $time, 0, 5 ) ),
+						$date_time_string,
+						implode(" ", $dates),
+						implode(" ", $times),
 						wp_nonce_field(OLBsystem::TEXTDOMAIN, 'onetimetoken', true, false),
 						$action,
 						$submit,
@@ -1233,11 +1255,18 @@ EOD;
 	/** 
 	 *	タイムテーブルのキー文字列分解: Parse key of timetable
 	 */
-	public static function parseTimetableKey($key){
+	public static function parseTimetableKey($keys){
 		// ex. '2013-06-11_1040' > '2013-06-11' + '10:40:00'
-		$date = substr($key, 0, 10);
-		$time = substr($key, 11, 2).':'.substr($key, -2).':00';
-		return array($date, $time);
+		$date_time_arr = explode(",",$keys);
+		$dates = [];
+		$times = [];
+		foreach($date_time_arr as $value) {
+			$date = substr($value, 0, 10);
+			$time = substr($value, 11, 2).':'.substr($value, -2).':00';
+			array_push($dates, $date);
+			array_push($times, $time);
+		}
+		return array($dates, $times);
 	}
 
 	/** 
