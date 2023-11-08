@@ -581,32 +581,43 @@ table.weekly_schedule td.you a {
 }
 
 .booking_btn {
-	float: right;
+	float: left;
+	margin: 0 0 5px;
+    padding: 4px 10px;
 	width: 60px;
-	border: 1px solid #eee;
-	transition: all 0.5s;
+	color: #333;
+	font-size: 14px;
+	font-weight: 700;
+    line-height: 20px;
+	border: 1px solid #dddddd;
+	border-radius: 2px;
+	transition: all 0.3s;
 }
+
+.booking_btn:hover {
+	cursor: pointer;
+}
+
 .item_select {
 	text-align: center;
 	color: red;
 }
 
-.booking_btn:hover {
-	background: #1af;
-	border: 1px solid #1af;
-	color: white;
-}
-
 table.weekly_schedule td.open,
 .reserve_slot {
 	cursor: pointer;
-	transition: all 0.5s;
+	transition: all 0.3s;
 }
 
 table.weekly_schedule td.open.active {
-	background-color: #1b6691;
+	background-color: #eee;
+    color: #333;
 }
 
-/* .reserve_slot.active {
-	color: #1b6691;
-} */
+.you {
+	transition: all 0.3s;
+}
+
+.you.active {
+	background-color: #eee !important;
+}

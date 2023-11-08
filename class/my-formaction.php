@@ -51,19 +51,30 @@ class olbFormAction {
 	public static function reservation() {
 		global $wpdb, $olb;
 
+		$_req_datetime = $_POST['reserve_datetime'];
+
 		$error = '';
 		if (empty($_POST['onetimetoken']) || !wp_verify_nonce($_POST['onetimetoken'], OLBsystem::TEXTDOMAIN)) {
 			$error = 'NONCE_ERROR';
 		}
-		else if(empty($_POST['room_id']) || empty($_POST['user_id']) || empty($_POST['reservedate']) || empty($_POST['reservetime'])) {
+		else if(empty($_POST['room_id']) || empty($_POST['user_id']) || empty($_req_datetime)) {
 			$error = 'PARAMETER_INSUFFICIENT';
 		}
 		else if($_POST['reserveaction']!='reserve' && $_POST['reserveaction']!='cancel') {
 			$error = 'INVALID_PARAMETER';
 		}
 		else {
-			$result = array();
-			$result = apply_filters( 'olb_can_reservation', $result, $_POST['room_id'], $_POST['user_id'], $_POST['reservedate'], $_POST['reservetime'] );
+			$result_list = array();
+
+			foreach( $_req_datetime as $key => $value ) {
+				$date = substr($value, 0, 10);
+				$time = substr($value, 11, 2).':'.substr($value, -2).':00';
+
+				$result = array();
+				$result = apply_filters( 'olb_can_reservation', $result, $_POST['room_id'], $_POST['user_id'], $date , $time);
+
+				array_push( $result_list, $result );
+			}
 			/**
 			 *	$result = array( 
 			 *		'code'   => 'RESERVE_OK',
@@ -82,45 +93,61 @@ class olbFormAction {
 			 *		),
 			 *	)
 			 */
-			extract($result);	// $code, $record, $user, $room
 
 			$prefix = $wpdb->prefix.OLBsystem::TABLEPREFIX;
 			// 予約
-			if($_POST['reserveaction']=='reserve' && $code=='NOT_RESERVED'){
-				$record['user_id'] = $user->data['id'];
-				$record['free']	= ( $user->canFreeReservation() ) ? 1 : 0;
-				$table = $prefix."history";
-				$ret = $wpdb->insert(
-								$table,
-								array(
-									'date'=>$record['date'],
-									'time'=>$record['time'],
-									'room_id' => $record['room_id'],
-									'user_id' => $record['user_id'],
-									'free' => $record['free']
-								)
-							);
-				$record = $olb->reserved($record['room_id'], $record['date'], $record['time']);
-				$result['record'] = $record;
-				do_action( 'olb_reservation', $result );
-			}
-			// CANCEL
-			else if($_POST['reserveaction']=='cancel' && $code=='ALREADY_RESERVED'){
-				$query = "DELETE FROM ".$prefix."history WHERE `id`=%d";
-				$ret = $wpdb->query($wpdb->prepare($query, array($record['id'])), ARRAY_A);
-				if(!$ret){
-					$error = 'CANCEL_FAILED';
+			foreach( $result_list as $_key => $_el ) {
+				extract($_el);	// $code, $record, $user, $room
+				if($_POST['reserveaction']=='reserve' && $code=='NOT_RESERVED'){
+					$record['user_id'] = $user->data['id'];
+					$record['free']	= ( $user->canFreeReservation() ) ? 1 : 0;
+					$table = $prefix."history";
+					$record_list = array();
+					$ret = $wpdb->insert(
+									$table,
+									array(
+										'date'=>$record['date'],
+										'time'=>$record['time'],
+										'room_id' => $record['room_id'],
+										'user_id' => $record['user_id'],
+										'free' => $record['free']
+									)
+								);
+					$record = $olb->reserved($record['room_id'], $record['date'], $record['time']);
+					array_push($record_list, $record);
+	
+					$_el['record'] = $record_list;
+					do_action( 'olb_reservation', $_el );
 				}
+				// CANCEL
+				else if($_POST['reserveaction']=='cancel' && $code=='ALREADY_RESERVED'){
+					$query = "DELETE FROM ".$prefix."history WHERE `id`=%d";
+					$ret = $wpdb->query($wpdb->prepare($query, array($record['id'])), ARRAY_A);
+					if(!$ret){
+						$error = 'CANCEL_FAILED';
+					}
+					else {
+						do_action( 'olb_cancellation', $_el );
+					}
+				}
+				// エラーあり
 				else {
-					do_action( 'olb_cancellation', $result );
+					$error = $code;
 				}
-			}
-			// エラーあり
-			else {
-				$error = $code;
 			}
 		}
-		$datetime = olbTimetable::getTimetableKey($record['date'], $record['time']);
+		$datetime = implode(",",$_req_datetime);
+		$date_time_mail_before = array();
+		foreach($_req_datetime as $_date) {
+
+			$date = substr($_date, 0, 10);
+			$time = substr($_date, 11, 2).':'.substr($_date, -2);
+
+			$date_time_view = $date.' '.$time;
+			array_push($date_time_mail_before, $date_time_view);
+		}
+		$date_time_mail_after = implode(",",$date_time_mail_before);
+
 		$url = get_permalink(get_page_by_path($olb->reserve_form_page)->ID);
 		// エラーあり
 		if($error) {
@@ -186,15 +213,15 @@ class olbFormAction {
 			$room_info->last_name,
 			$room_info->user_skype,
 			$record['id'],
-			$record['date'],
-			substr($record['time'], 0, 5),
+			$date_time_mail_after,
+			null,
 			date('Y-m-d H:i:s', current_time('timestamp')),
 			);
 
 		list( $search, $replace ) = apply_filters( 'olb_email_values', array( $search, $replace ), $result );
 		// 予約通知
 		if($_POST['reserveaction']=='reserve'){
-			$datetime = olbTimetable::getTimetableKey($_POST['reservedate'], $_POST['reservetime']);
+			$datetime = implode(",",$_req_datetime);
 			$cancel_url = get_permalink(get_page_by_path($olb->reserve_form_page)->ID);
 			$cancel_query = (strstr($cancel_url, '?')) ? '&' : '?';
 			$cancel_query .= sprintf('t=%s&room_id=%d', $datetime, $_POST['room_id']);
