@@ -664,8 +664,8 @@ EOD;
 						$olb->operator->data['skype'],
 						__('Date/Time', OLBsystem::TEXTDOMAIN),
 						$date_time_string,
-						$date,
-						$time,
+						$record['date'],
+						$record['time'],
 						apply_filters( 'olb_error', $information, $error ),
 					);
 			}
@@ -721,8 +721,8 @@ EOD;
 						sprintf('<a href="%s">%s</a>', $room['url'], $room['name']),
 						__('Date/Time', OLBsystem::TEXTDOMAIN),
 						$date_time_string,
-						$date,
-						$time,
+						$record['date'],
+						$record['time'],
 						apply_filters( 'olb_error', $information, $error ),
 					);
 			}
@@ -1303,7 +1303,34 @@ EOD;
 			$format = '<span class="reserve_slot" data-date-time="%2$s" data-room="%3$s">%4$s</span>'."\n";
 		}
 		printf($format,
-				get_permalink(get_page_by_path($olb->reserve_form_page)->ID),
+				$url,
+				$time,
+				$room_id,
+				$linktext
+			);
+		$html = ob_get_contents();
+		ob_end_clean();
+		if ($out) {
+			echo $html;
+		}
+		else {
+			return $html;
+		}
+	}
+
+	public function htmlReserveLink_Cancel($room_id, $time, $linktext, $out = false){
+		global $olb;
+
+		ob_start();
+		$url = get_permalink(get_page_by_path($olb->reserve_form_page)->ID);
+		if(strstr($url, '?')) {
+			$format = '<a href="%1$s&t=%2$s&room_id=%3$s">%4$s</a>'."\n";
+		}
+		else {
+			$format = '<a href="%1$s?t=%2$s&room_id=%3$s">%4$s</a>'."\n";
+		}
+		printf($format,
+				$url,
 				$time,
 				$room_id,
 				$linktext

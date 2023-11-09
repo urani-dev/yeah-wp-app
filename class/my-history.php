@@ -492,7 +492,7 @@ class olb_member_schedule extends olbHistory {
 					$class_cancel .= ' timeover';
 				}
 				else {
-					$cancellink = $olb->htmlReserveLink($r['room_id'], $time, __('CANCEL', OLBsystem::TEXTDOMAIN));
+					$cancellink = $olb->htmlReserveLink_Cancel($r['room_id'], $time, __('CANCEL', OLBsystem::TEXTDOMAIN));
 				}
 				$waiting = self::waitingTime($r['date'], $r['time'], current_time('timestamp'));
 				printf('<td class="date">%s %s</td><td class="waiting">%s</td><td class="room">%s</td><td class="%s">%s</td>',
