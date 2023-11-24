@@ -79,7 +79,7 @@ jQuery(document).ready(function($){
 		if(Array.isArray(date_time_arr) && date_time_arr.length) {
 			$dates = date_time_arr.join(",");
 			$room_id = room_arr.join(",");
-			window.location.href = `${window.location.origin}/public_html/reservation/?t=${$dates}&room_id=${$room_id}`
+			window.location.href = `${window.location.origin}/booking/reservation/?t=${$dates}&room_id=${$room_id}`
 		}
 	})
 
