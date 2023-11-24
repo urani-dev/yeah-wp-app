@@ -47,6 +47,7 @@ class olbFormAction {
 
 	/**
 	 *	予約・キャンセル: Reservation and Cancellation by member
+	 * 	Update by URANI 
 	 */
 	public static function reservation() {
 		global $wpdb, $olb;

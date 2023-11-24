@@ -411,6 +411,7 @@ class olbTimetable extends OLBsystem{
 
 	/** 
 	 *	予約/キャンセルフォーム: Reserve(or cancel) form by member
+	 *	Update by URANI 
 	 */
 	public static function htmlReserveForm($out = false){
 		global $olb;
@@ -1317,7 +1318,9 @@ EOD;
 			return $html;
 		}
 	}
-
+	/** 
+	 *  Update by URANI
+	 */
 	public function htmlReserveLink_Cancel($room_id, $time, $linktext, $out = false){
 		global $olb;
 
@@ -1456,6 +1459,7 @@ EOD;
 
 	/** 
 	 *	週間スケジュールの表示: Output weekly schedule board
+	 * Update by URANI
 	 */
 	public function htmlWeeklySchedule($out = false){
 		$header = self::htmlWeeklyHeader();

@@ -458,6 +458,7 @@ class olb_member_schedule extends olbHistory {
 
 	/** 
 	 *	会員の予約予定: Show member's future schedule
+	 *	Update by URANI 
 	 */
 	public function html($out = false){
 		global $olb;

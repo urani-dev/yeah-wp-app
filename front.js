@@ -55,6 +55,7 @@ jQuery(document).ready(function($){
 		}
 	})
 
+	/* Update by URANI */
 	var date_time_arr = []
 	var room_arr = []
 	$(".reserve_slot").click(function(e) {
